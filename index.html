@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHYTONEXUS Virtual Lab · EDGE NOVA'26 · Team Zenith</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="st-off">
+
+<div id="lockVignette"></div>
+
+<header id="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><path d="M20 3C13 10 8 15 8 24a12 12 0 0 0 24 0c0-9-5-14-12-21z" fill="none" stroke="#6366f1" stroke-width="2.4"/><path d="M20 14v16M20 22c-3-1-6-4-7-7M20 26c3-1 6-4 7-7" stroke="#22d3ee" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    <div><h1>PHYTONEXUS <em>Virtual Lab</em></h1><span>Smart Closed-Loop Phytochemical Extraction Safety Controller · EDGE NOVA'26 · Team Zenith</span></div>
+  </div>
+  <div class="status-chips">
+    <span id="chipState" class="chip st-safe">OFFLINE</span>
+    <span id="chipRelay" class="chip">RELAY --</span>
+    <span id="chipUptime" class="chip">00:00</span>
+    <span id="chipSim" class="chip">SIM x1</span>
+  </div>
+  <div class="top-actions">
+    <select id="simSpeed" title="Simulation speed"><option value="1">x1</option><option value="2">x2</option><option value="5">x5</option><option value="10">x10</option></select>
+    <button id="btnSound" class="icon-btn" title="Toggle alarm sound">SND OFF</button>
+    <button id="btnPower" class="btn btn-power">POWER ON</button>
+    <button id="btnEstop" class="btn btn-estop">E-STOP</button>
+  </div>
+</header>
+
+<div id="alarmBanner" class="alarm-banner hidden"><b id="alarmText">HAZARD</b><span id="alarmSub"></span><button id="btnAlarmAck">ACKNOWLEDGE</button></div>
+
+<section id="wiringAssembler" class="panel wiring-hero">
+  <div class="panel-head">
+    <h2>Interactive Circuit Assembler</h2>
+    <span class="tag">Step 1: Connect model components</span>
+    <button id="wiringAutoHeaderBtn" class="btn btn-power auto-wire-btn" onclick="if(window.autoConnect) window.autoConnect();">⚡ Connect Automatically</button>
+    <button id="wiringHelpBtn" class="mini">Wiring Guide</button>
+    <span class="wiring-score-wrap">Verified Ports: <b id="wiringScore">0/23</b></span>
+  </div>
+
+  <div class="wiring-grid">
+    <div class="wiring-palette">
+      <div class="wiring-palette-title">Component Palette</div>
+      <p class="tiny">Drag components onto the canvas or click Connect Automatically.</p>
+      <div id="wiringSidebar" class="wiring-chips"></div>
+    </div>
+
+    <div class="wiring-stage">
+      <canvas id="wiringCanvas" width="800" height="420"></canvas>
+      <div id="wiringTooltip" class="wiring-tooltip"></div>
+    </div>
+  </div>
+
+  <div class="wiring-bar">
+    <span id="wiringStatus" class="wiring-status">Drag components onto the canvas or click "Connect Automatically" to auto-wire all ports.</span>
+    <div class="wiring-actions">
+      <button id="wiringAutoBtn" class="btn btn-power auto-wire-btn">⚡ Connect Automatically</button>
+      <button id="wiringCheck" class="btn">Verify Wiring</button>
+      <button id="wiringReset" class="mini">Reset Wiring</button>
+    </div>
+  </div>
+
+  <div id="wiringSuccess" class="wiring-success hidden">
+    <span>✔ All model component ports correctly connected and verified! Click POWER ON below to ignite glowing lights & process rig.</span>
+  </div>
+
+  <div id="wiringHelp" class="wiring-help hidden">
+    <h3>Exact Port-by-Port Connection Schematic</h3>
+    <ul>
+      <li><b>Power Supply (2x 18650):</b> + → ESP32 VIN | - → ESP32 GND</li>
+      <li><b>MQ-3 Alcohol Sensor:</b> AOUT → ESP32 GPIO34 | VCC → ESP32 3V3 | GND → ESP32 GND</li>
+      <li><b>DHT22 Temp/Humidity:</b> DATA → ESP32 GPIO4 | VCC → ESP32 3V3 | GND → ESP32 GND</li>
+      <li><b>5V 1-Ch Relay Module:</b> IN → ESP32 GPIO5 | VCC → ESP32 3V3 | GND → ESP32 GND | COM → Hot Plate L</li>
+      <li><b>0.96" OLED (SSD1306):</b> SDA → ESP32 GPIO16 | SCL → ESP32 GPIO17 | VCC → ESP32 3V3 | GND → ESP32 GND</li>
+      <li><b>Alarm Buzzer:</b> + → ESP32 GPIO18 | - → ESP32 GND</li>
+      <li><b>Status Green LED:</b> + → ESP32 GPIO19 | - → ESP32 GND</li>
+      <li><b>Status Red LED:</b> + → ESP32 GPIO23 | - → ESP32 GND</li>
+      <li><b>Hot Plate 800W:</b> L → Relay COM | N → Battery Ground (-)</li>
+    </ul>
+  </div>
+</section>
+
+<main class="lab-grid">
+
+  <section class="panel panel-rig">
+    <div class="panel-head">
+      <h2>Live Process Rig</h2>
+      <div class="legend">
+        <span><i class="lg lg-vap"></i>Ethanol vapour</span>
+        <span><i class="lg lg-heat"></i>Heater powered via relay</span>
+      </div>
+    </div>
+
+    <div class="rig-stage" id="rigStage">
+      <svg id="rigSvg" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="gFlask" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(140,190,255,.06)"/><stop offset="1" stop-color="rgba(120,170,255,.16)"/></linearGradient>
+          <linearGradient id="gLiq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2dd4bf88"/><stop offset="1" stop-color="#0ea5a099"/></linearGradient>
+          <linearGradient id="gPcb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12294a"/><stop offset="1" stop-color="#0c1c36"/></linearGradient>
+          <radialGradient id="gBarrel" cx=".35" cy=".35" r=".9"><stop offset="0" stop-color="#cbd5e1"/><stop offset="1" stop-color="#64748b"/></radialGradient>
+          <clipPath id="clipFlask"><path d="M272 200 L272 258 Q272 276 250 300 L236 320 Q228 332 240 338 L360 338 Q372 332 364 320 L350 300 Q328 276 328 258 L328 200 Z"/></clipPath>
+          <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <rect x="0" y="0" width="960" height="600" fill="transparent"/>
+        <g opacity=".25" stroke="#1e3a5f" stroke-width="1">
+          <path d="M60 60 H900 M60 130 H900 M60 200 H900 M60 270 H900 M60 340 H900 M60 410 H900"/>
+          <path d="M150 30 V450 M330 30 V450 M510 30 V450 M690 30 V450 M870 30 V450" opacity=".4"/>
+        </g>
+        <rect x="40" y="468" width="880" height="18" rx="4" fill="#152238" stroke="#234067"/>
+        <text x="52" y="500" class="svg-cap">LAB BENCH · FIELD KIT ENCLOSURE</text>
+
+        <ellipse id="spillPool" cx="305" cy="472" rx="0" ry="7" fill="rgba(160,220,255,.38)"/>
+
+        <g id="partVessel" data-part="vessel" class="clickable">
+          <path d="M272 200 L272 258 Q272 276 250 300 L236 320 Q228 332 240 338 L360 338 Q372 332 364 320 L350 300 Q328 276 328 258 L328 200 Z" fill="url(#gFlask)" stroke="#7fb4ff" stroke-opacity=".55" stroke-width="2"/>
+          <g clip-path="url(#clipFlask)">
+            <rect id="vLiquid" x="225" y="308" width="150" height="32" fill="url(#gLiq)"/>
+            <g id="herbs" fill="#2f9e63" opacity=".9">
+              <path d="M282 330 q8 -14 18 -2 q-10 8 -18 2z"/>
+              <path d="M304 332 q10 -12 19 0 q-11 8 -19 0z"/>
+              <path d="M293 320 q9 -12 17 -1 q-9 8 -17 1z"/>
+            </g>
+            <g id="bubbles">
+              <circle class="bub b1" cx="278" cy="336" r="3.4"/>
+              <circle class="bub b2" cx="300" cy="338" r="4.4"/>
+              <circle class="bub b3" cx="322" cy="335" r="2.8"/>
+              <circle class="bub b4" cx="290" cy="338" r="2.2"/>
+              <circle class="bub b5" cx="312" cy="337" r="3.2"/>
+            </g>
+          </g>
+
+          <g id="partDht" data-part="dht" class="clickable">
+            <rect x="282" y="224" width="36" height="46" rx="4" fill="#e2e8f0" opacity=".92"/>
+            <path d="M286 234 h28 M286 242 h28 M286 250 h28 M286 258 h28" stroke="#94a3b8"/>
+            <rect x="290" y="228" width="20" height="7" rx="2" fill="#64748b"/>
+            <text x="300" y="218" text-anchor="middle" class="svg-lbl dark-on-light" font-size="10">DHT22</text>
+          </g>
+
+          <ellipse id="lid" cx="300" cy="198" rx="36" ry="8" fill="#334768" stroke="#5b7ba8"/>
+          <rect x="268" y="192" width="64" height="6" rx="3" fill="#3d5378"/>
+          <text x="228" y="172" class="svg-lbl">Extraction vessel</text>
+          <text x="228" y="188" class="svg-sub">ethanol + tulsi batch</text>
+
+          <g id="vesselLeds" class="vessel-led-panel">
+            <rect x="374" y="210" width="40" height="96" rx="6" fill="#111c30" stroke="#25436e" stroke-width="1.5"/>
+            <text x="394" y="223" text-anchor="middle" class="svg-tiny" font-size="8" fill="#7f9cc4">STATUS</text>
+
+            <circle id="vLedBlue" cx="394" cy="238" r="6.5" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="394" y="252" text-anchor="middle" class="svg-tiny" font-size="7" fill="#60a5fa">PWR</text>
+
+            <circle id="vLedGreen" cx="394" cy="265" r="6.5" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+            <text x="394" y="279" text-anchor="middle" class="svg-tiny" font-size="7" fill="#4ade80">SAFE</text>
+
+            <circle id="vLedRed" cx="394" cy="292" r="6.5" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="394" y="306" text-anchor="middle" class="svg-tiny" font-size="7" fill="#f87171">ALARM</text>
+          </g>
+        </g>
+
+        <g id="partHeater" data-part="heater" class="clickable">
+          <rect x="216" y="438" width="168" height="30" rx="7" fill="#1c2c4e" stroke="#31548c"/>
+          <path id="heatCoil" d="M232 453 h18 l6 -8 6 16 6 -16 6 16 6 -16 6 16 6 -16 6 16 6 -16 6 16 6 -8 h20" fill="none" stroke="#f97316" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="368" cy="453" r="7" fill="#0f1b30" stroke="#4a6da8"/><rect x="365" y="449" width="6" height="3" rx="1.5" fill="#8fb3ff"/>
+          <text x="222" y="430" class="svg-lbl">Hot plate 800 W</text>
+          <text x="222" y="444" class="svg-sub">isolated by relay CH1</text>
+        </g>
+
+        <g id="partRelay" data-part="relay" class="clickable">
+          <rect x="446" y="404" width="112" height="64" rx="6" fill="url(#gPcb)" stroke="#2f5f96"/>
+          <rect x="466" y="416" width="54" height="42" rx="3" fill="#12365f" stroke="#2f5f96"/>
+          <text x="470" y="432" class="svg-tiny">SRD-05VDC</text>
+          <line id="relayArm" x1="492" y1="446" x2="506" y2="446" stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="456" cy="446" r="4" fill="#334155"/><circle cx="530" cy="446" r="4" fill="#334155"/>
+          <rect id="relayLedDot" x="544" y="412" width="8" height="8" rx="4" fill="#22c55e"/>
+          <path id="wirePowered" class="wire-pwr" d="M446 448 C 420 448, 400 452, 384 452"/>
+          <text x="446" y="392" class="svg-lbl">Relay module CH1</text>
+        </g>
+
+        <g id="partMq3" data-part="mq3" class="clickable">
+          <rect x="480" y="298" width="86" height="46" rx="6" fill="url(#gPcb)" stroke="#2f5f96"/>
+          <circle cx="546" cy="321" r="17" fill="url(#gBarrel)" stroke="#334155" filter="url(#softGlow)"/>
+          <circle cx="546" cy="321" r="10" fill="none" stroke="#475569" stroke-dasharray="2.5 2.5"/>
+          <circle id="mqDot" cx="492" cy="308" r="4" fill="#22c55e"/>
+          <text x="486" y="290" class="svg-lbl">MQ-3 alcohol sensor</text>
+          <path d="M563 310 q26 -18 44 -30" class="sense-ray"/>
+        </g>
+
+        <g id="partBuzzer" data-part="buzzer" class="clickable">
+          <circle cx="120" cy="140" r="24" fill="#111827" stroke="#374151" stroke-width="3"/>
+          <circle cx="120" cy="140" r="7" fill="#1f2937" stroke="#4b5563"/>
+          <g id="soundArcs"><path d="M150 122 a34 34 0 0 1 0 36" /><path d="M160 112 a48 48 0 0 1 0 56"/><path d="M170 102 a62 62 0 0 1 0 76"/></g>
+          <text x="92" y="184" class="svg-lbl">Alarm buzzer</text>
+        </g>
+
+        <g id="partEsp" data-part="esp" class="clickable">
+          <rect x="640" y="430" width="204" height="84" rx="8" fill="url(#gPcb)" stroke="#3b82f6" stroke-opacity=".5"/>
+          <rect x="662" y="446" width="72" height="42" rx="3" fill="#26344f" stroke="#3b4d6f"/>
+          <text x="668" y="472" class="svg-tiny">ESP32-WROOM</text>
+          <rect x="830" y="462" width="14" height="20" rx="2" fill="#475569"/>
+          <circle id="espHeart" cx="656" cy="444" r="4" fill="#22d3ee"/>
+          <path d="M646 500 h192 M652 500 v8 M668 500 v8 M684 500 v8 M700 500 v8 M716 500 v8 M748 500 v8 M764 500 v8 M780 500 v8 M796 500 v8 M812 500 v8 M828 500 v8" stroke="#3b5a8a"/>
+          <path d="M700 446 l8 10 -8 10 8 10 8 -10 -8 -10 8 -10 z" fill="none" stroke="#38bdf8" opacity=".7"/>
+          <text x="640" y="530" class="svg-lbl">ESP32 edge controller</text>
+        </g>
+
+        <g id="partBatt" data-part="batt" class="clickable">
+          <rect x="756" y="512" width="26" height="58" rx="4" fill="#1e293b" stroke="#3b5a8a"/><rect id="battCell1" x="759" y="515" width="20" height="46" rx="2" fill="#34d399"/>
+          <rect x="790" y="512" width="26" height="58" rx="4" fill="#1e293b" stroke="#3b5a8a"/><rect id="battCell2" x="793" y="515" width="20" height="46" rx="2" fill="#34d399"/>
+          <rect x="750" y="570" width="72" height="8" rx="3" fill="#152238" stroke="#234067"/>
+          <path d="M782 541 h20" stroke="#3b5a8a" stroke-dasharray="3 3"/>
+          <text x="748" y="502" class="svg-lbl">2x 18650 pack</text>
+        </g>
+
+        <g id="labels"></g>
+      </svg>
+      <canvas id="fxCanvas"></canvas>
+      <button id="btnTour" class="tour-fab">GUIDED TOUR</button>
+      <button id="btnFixSensor" class="rig-fix hidden">REPLACE MQ-3 SENSOR</button>
+      <button id="btnCleanup" class="rig-fix hidden">CLEAN SPILL</button>
+    </div>
+
+    <div class="scenario-row">
+      <span class="row-cap">DEMO SCENARIOS</span>
+      <button class="btn scn" id="scnSafe">Safe Batch Run</button>
+      <button class="btn scn warn" id="scnEthanolLeak">Ethanol Vapour Leak</button>
+      <button class="btn scn bad" id="scnTempExceed">Temperature Exceeds Threshold</button>
+      <button class="btn scn ghost" id="btnResetSim">Reset Rig</button>
+    </div>
+  </section>
+
+  <aside class="rail">
+
+    <section class="panel device-panel">
+      <div class="panel-head"><h2>PHYTONEXUS Unit</h2><span class="tag" id="fwTag">fw v2.1 sim</span></div>
+      <div class="device-flex">
+        <div id="oledScreen" class="oled off">
+          <span id="oledL1">PHYTONEXUS v2.1</span>
+          <span id="oledL2">TEMP: --.- °C</span>
+          <span id="oledL3">ALC:  0 ppm</span>
+          <span id="oledL4">YIELD: 0%</span>
+          <span id="oledL5" class="tiny-oled">ENERGY: 0 J</span>
+          <i class="scanlines"></i>
+        </div>
+        <div class="device-io">
+          <div class="led-row">
+            <div class="led-wrap"><span id="ledGreen" class="led led-g"></span><small>SAFE</small></div>
+            <div class="led-wrap"><span id="ledRed" class="led led-r"></span><small>ALERT</small></div>
+            <div class="led-wrap"><span id="ledAmber" class="led led-a"></span><small>WARN</small></div>
+          </div>
+          <div id="buzzerIcon" class="buzzer"><i></i><i></i><i></i><small>BUZZER</small></div>
+          <div id="relayBox" class="mini-box" title="Channel 1 power relay"><span id="relayTxt">OPEN</span><small>RELAY CH1</small></div>
+          <div class="mini-box batt-box" title="Battery pack"><div class="batt-shell"><div id="battFill"></div></div><small id="battTxt">92%</small></div>
+        </div>
+      </div>
+      <p class="hint">Tip: click parts of the rig for component specs.</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Process Controls</h2><label class="switch"><input type="checkbox" id="ctlAuto" checked><i></i>AUTOPILOT</label></div>
+      <div class="ctl-row" id="rowSet"><label>Target temp</label><input type="range" id="ctlSet" min="65" max="78" value="68"><output id="outSet">68 °C</output></div>
+      <div class="ctl-row"><label>Heater force <small>(manual)</small></label><input type="range" id="ctlHeat" min="0" max="100" value="0"><output id="outHeat">0%</output></div>
+      <div class="ctl-row sw-row">
+        <label class="switch"><input type="checkbox" id="ctlLid" checked><i></i>LID CLOSED</label>
+      </div>
+      <div class="ctl-row sel-row"><label>Batch recipe</label>
+        <select id="selBatch">
+          <option value="tulsi">Tulsi · ethanol</option>
+          <option value="turmeric">Turmeric · ethanol</option>
+          <option value="mint">Mint · ethanol</option>
+          <option value="neem">Neem · ethanol</option>
+        </select>
+      </div>
+    </section>
+
+  </aside>
+
+  <section class="panel span-all">
+    <div class="panel-head"><h2>Telemetry</h2><span class="tiny">simulated sensors · 2 Hz logging</span></div>
+    <div class="gauges-row">
+      <div class="gauge-card"><canvas id="gaugeTemp" width="170" height="120"></canvas><span>Vessel temp</span></div>
+      <div class="gauge-card"><canvas id="gaugeMq3" width="170" height="120"></canvas><span>MQ-3 ppm</span></div>
+      <div class="gauge-card"><canvas id="gaugeHum" width="170" height="120"></canvas><span>Humidity %RH</span></div>
+      <div class="gauge-card"><canvas id="gaugeQual" width="170" height="120"></canvas><span>Batch quality</span></div>
+      <div class="stat-cards">
+        <div class="stat"><small>BATCH PROGRESS</small><b id="bigProg">0%</b><i><span id="progBar"></span></i></div>
+        <div class="stat"><small>EXTRACTION TIMER</small><b id="statTimer">--:--</b></div>
+        <div class="stat"><small>ENERGY CONSUMED</small><b id="statEnergy">0 J</b></div>
+        <div class="stat"><small>EXTRACTION EFFICIENCY</small><b id="statEff">--%</b></div>
+        <div class="stat"><small>LOCKDOWNS</small><b id="statTrips">0</b></div>
+        <div class="stat"><small>UPTIME</small><b id="statUp">00:00</b></div>
+      </div>
+    </div>
+    <div class="chart-card"><h3>Strip chart <span class="tiny">temp · MQ-3 (true vs sensed) · quality · relay lane</span></h3><canvas id="chartMain" height="250"></canvas></div>
+  </section>
+
+  <section class="panel span-half">
+    <div class="panel-head"><h2>Serial Monitor</h2>
+      <span class="console-bar"><button class="mini" id="btnSerialPause">PAUSE</button><button class="mini" id="btnSerialClr">CLEAR</button><button class="mini" id="btnSerialDl">EXPORT</button></span>
+    </div>
+    <pre id="serialOut" class="serial"></pre>
+  </section>
+
+  <section class="panel span-half">
+    <div class="panel-head"><h2>Event Log</h2>
+      <span class="console-bar"><button class="mini" id="btnLogClr">CLEAR</button><button class="mini" id="btnLogDl">EXPORT</button></span>
+    </div>
+    <ul id="eventLog" class="eventlog"></ul>
+  </section>
+</main>
+
+<div class="doc-wrap">
+  <nav id="docNav">
+    <a href="#doc-about" class="active">About</a><a href="#doc-problem">Problem</a><a href="#doc-how">How it works</a><a href="#doc-safety">Safety logic</a><a href="#doc-bom">Hardware BOM</a><a href="#doc-sw">Software</a><a href="#doc-results">Results</a><a href="#doc-roadmap">Roadmap</a><a href="#doc-sdg">SDG</a><a href="#doc-faq">FAQ</a>
+  </nav>
+
+  <section id="doc-about" class="panel doc">
+    <h2>PHYTONEXUS · Digital Nervous System for Safe &amp; Reproducible Botanical Extraction</h2>
+    <div class="doc-cols">
+      <div>
+        <h3>Abstract</h3>
+        <p>A unified, hardware-agnostic <b>closed-loop control and telemetry layer</b> that transforms small-scale phytochemical extraction into a monitored, safe, and reproducible process. Aligned with <b>UN SDG 9</b>, PHYTONEXUS bridges cheap physical components and data platforms through simulation-first onboarding, fault-tolerant state machines, and real-time process intelligence.</p>
+        <h3>Impact</h3>
+        <p>Safer workplaces · Run-to-run reproducibility · Lower entry barriers · Decentralised botanical research &amp; micro-enterprise infrastructure.</p>
+      </div>
+      <div>
+        <h3>Why it stands out</h3>
+        <ul class="tick">
+          <li>Updated reference BOM cost: <b>₹1,120</b></li>
+          <li><b>Simulation-First Onboarding:</b> Interactive wiring assembler &amp; digital twin</li>
+          <li><b>Hardware Abstraction Layer:</b> Unifies any sensor (DHT22, DS18B20, MQ-3)</li>
+          <li><b>Fault-Tolerant Watchdog:</b> Catches frozen/drifting/missing signals</li>
+          <li>Built for Ayurvedic labs, rural micro-enterprises &amp; remote field research</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="doc-problem" class="panel doc">
+    <h2>Problem Statement &amp; Gaps Closed</h2>
+    <p>Botanical extraction in small-scale labs suffers from core infrastructure gaps:</p>
+    <div class="gap-grid">
+      <article><h4>Safety Visibility Gap</h4><p>Flammable ethanol vapours near heating elements cause explosion hazards when unmonitored.</p></article>
+      <article><h4>Quality &amp; Data Gap</h4><p>Thermal surges spoil active compounds; process telemetry is rarely recorded systematically.</p></article>
+      <article><h4>Access &amp; Integration Gap</h4><p>Industrial extractors cost lakhs; cheap discrete components lack a common data/control layer.</p></article>
+      <article><h4>Reliability Gap</h4><p>Standard microcontrollers fail silently when sensors drift or disconnect during long runs.</p></article>
+    </div>
+  </section>
+
+  <section id="doc-how" class="panel doc">
+    <h2>How It Works · The Closed Loop</h2>
+    <ol class="steps">
+      <li><b>Sense</b> — MQ-3 continuously measures ambient ethanol vapour; DHT22 samples climate conditions.</li>
+      <li><b>Decide</b> — ESP32 state machine classifies readings into NORMAL / WARNING / ALERT / FAULT / LOCK states.</li>
+      <li><b>Act</b> — On hazard or threshold exceedance, relay isolates the heater load in &lt;50 ms with local visual and acoustic alarms.</li>
+      <li><b>Recover</b> — Hysteresis recovery re-arms the heater safely only after vapour/temp returns to safe operating envelope.</li>
+    </ol>
+  </section>
+
+  <section id="doc-safety" class="panel doc">
+    <h2>Firmware Safety State Machine</h2>
+    <table class="tbl">
+      <thead><tr><th>State</th><th>Trigger / Condition</th><th>System Behavior</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill p-green">NORMAL</span></td><td>MQ-3 &lt; 200 ppm, T &lt; 80°C</td><td>Green LED on · Relay CLOSED · OLED streams live telemetry</td></tr>
+        <tr><td><span class="pill p-amber">WARNING</span></td><td>200 – 400 ppm</td><td>Amber LED · OLED warning screen · Intermittent buzzer chirps</td></tr>
+        <tr><td><span class="pill p-red">ALERT / LOCK</span></td><td>&gt; 400 ppm or T &gt; 90°C</td><td>Relay OPENS in &lt;50 ms · Red LED + continuous alarm · OLED hazard banner</td></tr>
+        <tr><td><span class="pill p-blue">RECOVERY</span></td><td>&lt; 150 ppm held 5s</td><td>Buzzer silences · Cooldown timer starts · Re-arms automatically</td></tr>
+        <tr><td><span class="pill p-violet">FAULT</span></td><td>Sensor missing / NaN / frozen</td><td>Fail-safe lockdown · OLED fault code · Manual intervention required</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="doc-bom" class="panel doc">
+    <h2>Reference Bill of Materials · Total ₹1,120</h2>
+    <table class="tbl bom">
+      <thead><tr><th>#</th><th>Component</th><th>Role in System</th><th>Qty</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>ESP32 DevKit (38-pin Type-C)</td><td>Edge controller running state machine</td><td>1</td><td>₹350</td></tr>
+        <tr><td>2</td><td>MQ-3 alcohol gas sensor</td><td>Ethanol vapour proxy signal</td><td>1</td><td>₹120</td></tr>
+        <tr><td>3</td><td>DHT22 climate sensor</td><td>Temperature + humidity monitoring</td><td>1</td><td>₹145</td></tr>
+        <tr><td>4</td><td>5V 1-channel relay module</td><td>Physical load isolation interface</td><td>1</td><td>₹68</td></tr>
+        <tr><td>5</td><td>0.96-inch OLED (SSD1306)</td><td>Local live telemetry screen</td><td>1</td><td>₹158</td></tr>
+        <tr><td>6</td><td>Mini buzzer + status LEDs</td><td>Local acoustic &amp; visual alarms</td><td>1</td><td>₹19</td></tr>
+        <tr><td>7</td><td>2x 18650 Li-ion cells + holder</td><td>Off-grid portable controller power</td><td>1</td><td>₹211</td></tr>
+        <tr><td>8</td><td>Interconnects &amp; passives</td><td>Wiring harness and current limiters</td><td>1</td><td>₹49</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">TOTAL REFERENCE COST</td><td>₹1,120</td></tr></tfoot>
+    </table>
+  </section>
+
+</div>
+
+<div id="infoModal" class="modal hidden"><div class="modal-card"><h3 id="infoTitle"></h3><div id="infoBody"></div><button id="infoClose" class="btn">CLOSE</button></div></div>
+
+<div id="tourOverlay" class="hidden"><div id="tourSpot"></div><div id="tourCard">
+  <h3 id="tourTitle"></h3><p id="tourBody"></p>
+  <div class="tour-nav"><span id="tourStep"></span><button id="tourPrev" class="mini">BACK</button><button id="tourNext" class="btn">NEXT</button><button id="tourEnd" class="mini">EXIT</button></div>
+</div></div>
+
+<div id="toasts"></div>
+
+<script src="js/sim.js"></script>
+<script src="js/wiring.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
